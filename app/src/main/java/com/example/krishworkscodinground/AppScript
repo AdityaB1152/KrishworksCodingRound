@@ -1,0 +1,98 @@
+var doc = SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/1wshLaQabfI5I46oGeHb52qrhqw6h0CNulJIwG7vQLjk/edit#gid=0");
+var sheet = doc.getSheetByName("Data");
+
+
+function doPost(request){
+  var action = request.parameter.action;
+
+  if(action == 'addItem'){
+      return addItem(request);
+  }
+  if(action == 'trigger'){
+    return trigger(request);
+  }
+}
+
+
+function trigger(request){
+
+  var newSheet  = doc.insertSheet();
+  newSheet.setName("Result");
+
+  var source = doc.getSheetByName("Data");
+  var sourceRange = source.getDataRange();
+
+  var target = doc.getSheetByName("Result");
+
+  sourceRange.copyTo(target.getRange(1,1));
+
+  var rows = target.getLastRow();
+  var range = target.getRange(2,1,rows-1,target.getLastColumn());
+  var values = range.getValues();
+
+  var Col4 = [];
+
+  Col4.push(["Status"]);
+
+  for (var i=0; i<values.length; i++)
+    {
+      if(values[i][2]>40){
+        Col4.push(["Passed"])
+      }
+      else{
+        Col4.push(["Failed"])
+      }
+
+      }
+
+  target.getRange(1,4,Col4.length,1).setValues(Col4);
+
+  return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
+
+}
+
+function getItem(request){
+
+  var records = {};
+  var rows = sheet.getRange(2,1,sheet.getLastRow()-1 , sheet.getLastColumn()).getValues();
+  var data = [];
+
+  for(var r =0 , l=rows.length;r<l;r++){
+    var row = rows[r];
+    var record = {};
+
+    record['studentId'] = row[0];
+    record['name'] = row[1];
+    record['marks'] = row[2];
+
+    data.push(record);
+
+  }
+
+  records.items = data;
+  var result = JSON.stringify(records);
+  return ContentService.createTextOutput(result).setMimeType(ContentService.MimeType.JSON);
+}
+
+function doGet(request){
+
+    return getItem(request);
+
+}
+
+
+function addItem(e){
+  var studentId = e.parameter.studentId
+  var name = e.parameter.name;
+  var marks = e.parameter.marks;
+
+  sheet.appendRow([studentId,name,marks]);
+
+  return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
+
+}
+
+function setup(){
+  var doc = SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/1wshLaQabfI5I46oGeHb52qrhqw6h0CNulJIwG7vQLjk/edit#gid=0");
+  PropertiesService.getScriptProperties().setProperty("key" , doc.getId());
+}
